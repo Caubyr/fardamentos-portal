@@ -81,10 +81,11 @@ function drawRows(){
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function items(){ const out=[]; document.querySelectorAll('#rows input').forEach(i=>{const q=Math.round(Number(i.value)||0); if(q>0) out.push({product_id:i.dataset.p,service:i.dataset.s,qty:q});}); return out; }
 function calc(){ let tot=0; document.querySelectorAll('#rows input').forEach(i=>{ const s=services.find(x=>x.product_id===i.dataset.p&&x.service===i.dataset.s); const t=(Number(i.value)||0)*Number(s.price); tot+=t; document.querySelector('[data-t="'+i.dataset.p+'|'+i.dataset.s+'"]').textContent=brl(t); }); $('tTot').textContent=brl(tot); }
+function stLabel(c){ const n=c.status_note?': '+esc(c.status_note):''; const m={pending:['Enviada — aguardando a JCN','#5B6178'],received:['Em análise na JCN','#9A5A10'],approved:['Aprovada ✓ — aguardando pagamento','#1E8E5A'],partial:['Aprovada ✓ — pagamento parcial','#1E8E5A'],paid:['Paga ✓','#1E8E5A'],correction:['Correção pedida'+n+' — envie uma nova cobrança','#B3261E'],rejected:['Recusada'+n,'#B3261E'],excluded:['Cancelada pela JCN','#B3261E']}[c.status]||[c.status,'#5B6178']; return '<b style="color:'+m[1]+'">'+m[0]+'</b>'; }
 async function loadHist(){
   const h=await api('charges?select=*&order=created_at.desc&limit=20');
   $('hist').innerHTML=h.length?h.map(c=>{ const tot=(c.items||[]).reduce((a,i)=>{const s=services.find(x=>x.product_id===i.product_id&&x.service===i.service);return a+(s?s.price*i.qty:0)},0);
-    return `<div class="hist"><b>Pedido #${esc(c.order_code)}</b> — ${brl(tot)}<br><small>${new Date(c.created_at).toLocaleDateString('pt-BR')} · ${c.status==='pending'?'aguardando análise':'recebida pela JCN'}</small></div>`}).join(''):'<p class="sub">Nenhuma cobrança enviada ainda.</p>';
+    return `<div class="hist"><b>Pedido #${esc(c.order_code)}</b> — ${brl(tot)}<br><small>${new Date(c.created_at).toLocaleDateString('pt-BR')} · ${stLabel(c)}</small></div>`}).join(''):'<p class="sub">Nenhuma cobrança enviada ainda.</p>';
 }
 $('btnIn').onclick=async()=>{ $('lMsg').innerHTML=''; try{ await auth({email:$('lEmail').value.trim().toLowerCase(),password:$('lPass').value},'password'); await start(); }catch(e){ $('lMsg').innerHTML='<div class="msg err">'+esc(e.message==='Invalid login credentials'?'E-mail ou senha incorretos.':e.message)+'</div>'; } };
 $('btnOut').onclick=logout; $('sOrder').onchange=drawRows;
