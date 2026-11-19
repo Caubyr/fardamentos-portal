@@ -68,11 +68,12 @@ async function start(){
   if(!me||!me.provider_key){ $('vApp').innerHTML='<div class="card"><h1>Acesso não liberado</h1><p class="sub">Seu login ainda não foi vinculado. Fale com a JCN Fardamentos.</p></div>'; return; }
   $('hello').textContent='Olá, '+(me.name||'')+'!';
   [services,orders]=await Promise.all([api('provider_services?select=*&order=product_name'),api('provider_orders?select=*&order=order_code.desc')]);
-  $('sOrder').innerHTML=orders.length?orders.map(o=>`<option value="${o.order_id}" data-c="${o.order_code}">#${o.order_code}${o.order_name?' — '+o.order_name:''}</option>`).join(''):'<option value="">Nenhum pedido liberado</option>';
+  $('sOrder').innerHTML=orders.length?orders.map(o=>`<option value="${o.order_id}" data-c="${o.order_code}">Pedido #${esc(o.order_code)}${o.order_name?' — '+esc(o.order_name):''}</option>`).join(''):'<option value="">Nenhum pedido liberado</option>';
   drawRows(); loadHist();
 }
 function drawRows(){
-  const by={}; services.forEach(s=>(by[s.product_id]=by[s.product_id]||[]).push(s));
+  const ord=orders.find(o=>o.order_id===$('sOrder').value); const list=(ord&&Array.isArray(ord.product_ids))?services.filter(s=>ord.product_ids.includes(s.product_id)):services;
+  const by={}; list.forEach(s=>(by[s.product_id]=by[s.product_id]||[]).push(s));
   $('rows').innerHTML=Object.keys(by).map(pid=>`<div class="prod"></div>`+by[pid].map(s=>`<div class="row"><div class="n">${esc(s.service_label)}<small>${brl(s.price)} / peça</small></div><input type="number" inputmode="numeric" min="0" data-p="${s.product_id}" data-s="${s.service}" placeholder="Qtd"><div class="t" data-t="${s.product_id}|${s.service}">${brl(0)}</div></div>`).join('')).join('');
   document.querySelectorAll('.prod').forEach((el,i)=>el.textContent=by[Object.keys(by)[i]][0].product_name);
   document.querySelectorAll('#rows input').forEach(i=>i.addEventListener('input',calc)); calc();
@@ -86,7 +87,7 @@ async function loadHist(){
     return `<div class="hist"><b>Pedido #${esc(c.order_code)}</b> — ${brl(tot)}<br><small>${new Date(c.created_at).toLocaleDateString('pt-BR')} · ${c.status==='pending'?'aguardando análise':'recebida pela JCN'}</small></div>`}).join(''):'<p class="sub">Nenhuma cobrança enviada ainda.</p>';
 }
 $('btnIn').onclick=async()=>{ $('lMsg').innerHTML=''; try{ await auth({email:$('lEmail').value.trim().toLowerCase(),password:$('lPass').value},'password'); await start(); }catch(e){ $('lMsg').innerHTML='<div class="msg err">'+esc(e.message==='Invalid login credentials'?'E-mail ou senha incorretos.':e.message)+'</div>'; } };
-$('btnOut').onclick=logout;
+$('btnOut').onclick=logout; $('sOrder').onchange=drawRows;
 $('btnSend').onclick=async()=>{
   const it=items(), sel=$('sOrder'), oid=sel.value; $('sMsg').innerHTML='';
   if(!oid){ $('sMsg').innerHTML='<div class="msg err">Selecione o pedido.</div>'; return; }
